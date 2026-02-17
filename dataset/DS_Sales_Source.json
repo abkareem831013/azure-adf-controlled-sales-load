@@ -1,0 +1,35 @@
+{
+	"name": "DS_Sales_Source",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_AnalyticsDB",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "Id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Amount",
+				"type": "decimal",
+				"precision": 10,
+				"scale": 2
+			},
+			{
+				"name": "LastModified",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "Sales_Source"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

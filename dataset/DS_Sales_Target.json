@@ -1,0 +1,39 @@
+{
+	"name": "DS_Sales_Target",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_AnalyticsDB",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "Id",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Amount",
+				"type": "decimal",
+				"precision": 10,
+				"scale": 2
+			},
+			{
+				"name": "LoadTime",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "LoadedBy",
+				"type": "varchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "Sales_Target"
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

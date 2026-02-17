@@ -1,0 +1,256 @@
+{
+	"name": "PL_Controlled_Sales_Load",
+	"properties": {
+		"activities": [
+			{
+				"name": "Set_RunId",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_RunId",
+					"value": {
+						"value": "@pipeline().RunId\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set_TriggerType",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set_RunId",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_TriggerType",
+					"value": {
+						"value": "@pipeline().TriggerType\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "SP_Insert_Audit_Start",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Set_CurrentTime",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[InsertAuditStart]",
+					"storedProcedureParameters": {
+						"LoadStartTime": {
+							"value": "",
+							"type": "DateTime"
+						},
+						"RunId": {
+							"value": "",
+							"type": "String"
+						},
+						"TriggerType": {
+							"value": "",
+							"type": "String"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_AnalyticsDB",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set_CurrentTime",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Set_TriggerType",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "v_CurrentTime",
+					"value": {
+						"value": "@utcNow()\n",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Check_Manual_Trigger",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "SP_Insert_Audit_Start",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(variables('v_TriggerType'),'Manual')\n",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Copy_Sales_Source_To_Target",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "AzureSqlSink",
+									"writeBehavior": "insert",
+									"sqlWriterUseTableLock": false
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "DS_Sales_Source",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "DS_Sales_Target",
+									"type": "DatasetReference"
+								}
+							]
+						},
+						{
+							"name": "SP_Update_Audit_Success",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy_Sales_Source_To_Target",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[dbo].[InsertAuditEnd]",
+								"storedProcedureParameters": {
+									"LoadEndTime": {
+										"value": {
+											"value": "@utcNow()\n",
+											"type": "Expression"
+										},
+										"type": "DateTime"
+									},
+									"RunId": {
+										"value": {
+											"value": "@variables('v_RunId')\n",
+											"type": "Expression"
+										},
+										"type": "String"
+									},
+									"Status": {
+										"value": {
+											"value": "Success\n",
+											"type": "Expression"
+										},
+										"type": "String"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "LS_AnalyticsDB",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Fail_Manual_Run",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "Manual execution is not allowed.",
+								"errorCode": "MANUAL_RUN_BLOCKED"
+							}
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"v_RunId": {
+				"type": "String"
+			},
+			"v_TriggerType": {
+				"type": "String"
+			},
+			"v_CurrentTime": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-02-17T19:39:09Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
