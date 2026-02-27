@@ -1,0 +1,59 @@
+{
+	"name": "dataflow1",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_Customer_Raw",
+						"type": "DatasetReference"
+					},
+					"name": "SRCCustomerRaw"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_Dim_Customer",
+						"type": "DatasetReference"
+					},
+					"name": "srcDimCustomer"
+				}
+			],
+			"sinks": [],
+			"transformations": [
+				{
+					"name": "drvCleanCustomer"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          CustomerID as integer,",
+				"          Name as string,",
+				"          City as string,",
+				"          Email as string,",
+				"          LastModifiedDate as timestamp",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> SRCCustomerRaw",
+				"source(output(",
+				"          SurrogateKey as integer,",
+				"          CustomerID as integer,",
+				"          Name as string,",
+				"          City as string,",
+				"          Email as string,",
+				"          EffectiveStartDate as timestamp,",
+				"          EffectiveEndDate as timestamp,",
+				"          IsCurrent as boolean",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> srcDimCustomer",
+				"SRCCustomerRaw derive(Email = lower(trim(Email)),",
+				"          City = trim(City)) ~> drvCleanCustomer"
+			]
+		}
+	}
+}
