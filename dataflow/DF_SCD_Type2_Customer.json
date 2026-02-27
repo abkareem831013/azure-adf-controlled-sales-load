@@ -131,7 +131,13 @@
 				"     format: 'table',",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     errorHandlingOption: 'stopOnFirstError') ~> sinkDimCustomer"
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          SurrogateKey,",
+				"          EffectiveStartDate,",
+				"          EffectiveEndDate,",
+				"          IsCurrent",
+				"     )) ~> sinkDimCustomer"
 			]
 		}
 	}
