@@ -19,7 +19,15 @@
 					"name": "srcDimCustomer"
 				}
 			],
-			"sinks": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_Customer_Error",
+						"type": "DatasetReference"
+					},
+					"name": "sinkCustomerError"
+				}
+			],
 			"transformations": [
 				{
 					"name": "drvCleanCustomer"
@@ -57,7 +65,25 @@
 				"SRCCustomerRaw derive(Email = lower(trim(Email)),",
 				"          City = trim(City)) ~> drvCleanCustomer",
 				"drvCleanCustomer split(!isNull(CustomerID) && !isNull(Email),",
-				"     disjoint: false) ~> csValidateCustomer@(ValidRecords, InvalidRecords)"
+				"     disjoint: false) ~> csValidateCustomer@(ValidRecords, InvalidRecords)",
+				"csValidateCustomer@InvalidRecords sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          CustomerID as integer,",
+				"          Name as string,",
+				"          City as string,",
+				"          Email as string,",
+				"          ErrorReason as string,",
+				"          ErrorTime as timestamp",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sinkCustomerError"
 			]
 		}
 	}

@@ -1,0 +1,44 @@
+{
+	"name": "DS_Customer_Error",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_SQL_AnalyticsDB",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "CustomerID",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "Name",
+				"type": "varchar"
+			},
+			{
+				"name": "City",
+				"type": "varchar"
+			},
+			{
+				"name": "Email",
+				"type": "varchar"
+			},
+			{
+				"name": "ErrorReason",
+				"type": "varchar"
+			},
+			{
+				"name": "ErrorTime",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": "Customer_Error"
+		}
+	}
+}
