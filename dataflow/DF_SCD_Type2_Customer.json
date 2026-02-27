@@ -34,6 +34,12 @@
 				},
 				{
 					"name": "csValidateCustomer"
+				},
+				{
+					"name": "jnCustomerWithDim"
+				},
+				{
+					"name": "drvDetectChanges"
 				}
 			],
 			"scriptLines": [
@@ -66,6 +72,16 @@
 				"          City = trim(City)) ~> drvCleanCustomer",
 				"drvCleanCustomer split(!isNull(CustomerID) && !isNull(Email),",
 				"     disjoint: false) ~> csValidateCustomer@(ValidRecords, InvalidRecords)",
+				"csValidateCustomer@ValidRecords, srcDimCustomer join(csValidateCustomer@ValidRecords@CustomerID == srcDimCustomer@CustomerID",
+				"     && ERROR_FUNCTION('') == ERROR_FUNCTION(''),",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> jnCustomerWithDim",
+				"jnCustomerWithDim derive(isChanged = csValidateCustomer@ValidRecords@Name != srcDimCustomer@Name ||\r",
+				"csValidateCustomer@ValidRecords@City != srcDimCustomer@City ||\r",
+				"csValidateCustomer@ValidRecords@Email != srcDimCustomer@Email,",
+				"          column1 = ERROR_FUNCTION('')) ~> drvDetectChanges",
 				"csValidateCustomer@InvalidRecords sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
