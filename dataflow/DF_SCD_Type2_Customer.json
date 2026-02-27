@@ -26,6 +26,13 @@
 						"type": "DatasetReference"
 					},
 					"name": "sinkCustomerError"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_Dim_Customer",
+						"type": "DatasetReference"
+					},
+					"name": "sinkDimCustomer"
 				}
 			],
 			"transformations": [
@@ -40,6 +47,9 @@
 				},
 				{
 					"name": "drvDetectChanges"
+				},
+				{
+					"name": "arSCDLogic"
 				}
 			],
 			"scriptLines": [
@@ -72,16 +82,17 @@
 				"          City = trim(City)) ~> drvCleanCustomer",
 				"drvCleanCustomer split(!isNull(CustomerID) && !isNull(Email),",
 				"     disjoint: false) ~> csValidateCustomer@(ValidRecords, InvalidRecords)",
-				"csValidateCustomer@ValidRecords, srcDimCustomer join(csValidateCustomer@ValidRecords@CustomerID == srcDimCustomer@CustomerID",
-				"     && ERROR_FUNCTION('') == ERROR_FUNCTION(''),",
+				"csValidateCustomer@ValidRecords, srcDimCustomer join(csValidateCustomer@ValidRecords@CustomerID == srcDimCustomer@CustomerID,",
 				"     joinType:'left',",
 				"     matchType:'exact',",
 				"     ignoreSpaces: false,",
 				"     broadcast: 'auto')~> jnCustomerWithDim",
-				"jnCustomerWithDim derive(isChanged = csValidateCustomer@ValidRecords@Name != srcDimCustomer@Name ||\r",
+				"jnCustomerWithDim derive(isChanged = isNull(srcDimCustomer@CustomerID) ||\r",
+				"csValidateCustomer@ValidRecords@Name != srcDimCustomer@Name ||\r",
 				"csValidateCustomer@ValidRecords@City != srcDimCustomer@City ||\r",
-				"csValidateCustomer@ValidRecords@Email != srcDimCustomer@Email,",
-				"          column1 = ERROR_FUNCTION('')) ~> drvDetectChanges",
+				"csValidateCustomer@ValidRecords@Email != srcDimCustomer@Email) ~> drvDetectChanges",
+				"drvDetectChanges alterRow(insertIf(isNull(srcDimCustomer@CustomerID)),",
+				"     updateIf({} == true())) ~> arSCDLogic",
 				"csValidateCustomer@InvalidRecords sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
@@ -99,7 +110,27 @@
 				"     format: 'table',",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true,",
-				"     errorHandlingOption: 'stopOnFirstError') ~> sinkCustomerError"
+				"     errorHandlingOption: 'stopOnFirstError') ~> sinkCustomerError",
+				"arSCDLogic sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          SurrogateKey as integer,",
+				"          CustomerID as integer,",
+				"          Name as string,",
+				"          City as string,",
+				"          Email as string,",
+				"          EffectiveStartDate as timestamp,",
+				"          EffectiveEndDate as timestamp,",
+				"          IsCurrent as boolean",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:true,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sinkDimCustomer"
 			]
 		}
 	}
